@@ -1,37 +1,45 @@
 #!/usr/bin/python3
-'''A script that reads stdin line by line and computes metrics'''
+''' script for processing requests logs '''
+from sys import stdin
+import re
 
 
-import sys
+def print_logs(status_codes, total_size):
+    ''' prints the logs '''
+    print('File size: {}'.format(total_size), flush=True)
+    for key, val in sorted(status_codes.items(), key=lambda v: v[0]):
+        if val:
+            print('{}: {}'.format(key, val), flush=True)
 
-cache = {'200': 0, '301': 0, '400': 0, '401': 0,
-         '403': 0, '404': 0, '405': 0, '500': 0}
-total_size = 0
-counter = 0
 
-try:
-    for line in sys.stdin:
-        line_list = line.split(" ")
-        if len(line_list) > 4:
-            code = line_list[-2]
-            size = int(line_list[-1])
-            if code in cache.keys():
-                cache[code] += 1
-            total_size += size
-            counter += 1
+def calc(line, total_size, status_codes):
+    ''' calculates metrics '''
+    parts = line.strip().split(' ')
+    if len(parts) >= 2:
+        status_code = parts[-2]
+        file_size = parts[-1]
+        total_size += int(file_size)
+        if status_code in status_codes.keys():
+            status_codes[status_code] += 1
+    return total_size
 
-        if counter == 10:
-            counter = 0
-            print('File size: {}'.format(total_size))
-            for key, value in sorted(cache.items()):
-                if value != 0:
-                    print('{}: {}'.format(key, value))
 
-except Exception as err:
-    pass
+def main():
+    ''' logs network requests '''
+    count = 0
+    status_codes = {'200': 0, '301': 0, '400': 0, '401': 0,
+                    '403': 0, '404': 0, '405': 0, '500': 0}
+    total_size = 0
+    try:
+        while True:
+            line = input()
+            total_size = calc(line, total_size, status_codes)
+            count += 1
+            if count % 10 == 0:
+                print_logs(status_codes, total_size)
+    except (KeyboardInterrupt, EOFError):
+        print_logs(status_codes, total_size)
 
-finally:
-    print('File size: {}'.format(total_size))
-    for key, value in sorted(cache.items()):
-        if value != 0:
-            print('{}: {}'.format(key, value))
+
+if __name__ == '__main__':
+    main()
