@@ -1,89 +1,64 @@
 #!/usr/bin/python3
-""" Script that reads stdin line by line and computes metrics
-
-    Input format:
-        <IP Address> - [<date>] "GET /projects/260 HTTP/1.1"
-            <status code> <file size>
-        (if the format is not this one, the line must be skipped)
-
-    format: <status code>: <number>
-"""
+""" Log parsing module """
 import sys
-import re
+from operator import itemgetter
 
 
-def print_status(total_size, status_codes):
-    """ Print Status Function """
-    print(f"File size: {total_size}")
-    for code, count in status_codes.items():
-        if count > 0:
-            print(f"{code}: {count}")
+def log_parser(log):
+    """ func that parses log into different fields """
+    log_fields = log.split()
+    file_size = int(log_fields[-1])
+    status_code = log_fields[-2]
+    return status_code, file_size
 
 
-def match_input(input_line):
-    """ Check if input line match """
-    data = {'status_code': 0, 'file_size': 0}
+def validate_format(log):
+    """ func that validates log format """
+    return False if len(log.split()) < 7 else True
 
-    pattern = re.compile(r'\b^[0-9]+.[0-9]+.[0-9]+.[0-9]+ - '
-                         r'\[[0-9]+-[0-9]+-[0-9]+ '
-                         r'[0-9]+:[0-9]+:[0-9]+.[0-9]+\] '
-                         r'"GET \/projects\/260 HTTP\/1.1" '
-                         r'(200|301|400|401|403|404|405|500) ([0-9]+)$\b')
 
-    match = pattern.search(input_line)
-    if not match:
-        return (None)
+def validate_status_code(status_code):
+    """ check that if status code entry is valid or not """
+    valid_status_codes = ["200", "301", "400", "401",
+                          "403", "404", "405", "500"]
+    return True if status_code in valid_status_codes else False
 
-    try:
-        data['status_code'] = int(match.group(1))
-    except Exception:
-        return (None)
 
-    try:
-        data['file_size'] = int(match.group(2))
-    except Exception:
-        return (None)
-    return (data)
+def print_log(file_size, status_codes) -> None:
+    """ prints the log files """
+    sorted_status_codes = sorted(status_codes.items(), key=itemgetter(0))
+    print('File size: {}'.format(file_size))
+    for code_count in sorted_status_codes:
+        key = code_count[0]
+        value = code_count[1]
+        print("{}: {}".format(key, value))
 
 
 def main():
-    """ Main Function """
+    """
+    reads logs from std in and prints the statistic
+    on the status code and file size
+    """
+    status_codes_count = {}
     total_size = 0
-    status_codes = {
-                200: 0,
-                301: 0,
-                400: 0,
-                401: 0,
-                403: 0,
-                404: 0,
-                405: 0,
-                500: 0
-            }
-    counter = 0
-
+    log_count = 0
     try:
-        for line in sys.stdin:
-            data = match_input(line)
-            counter += 1
-
-            if not data:
+        for log in sys.stdin:
+            log_count += 1
+            if not validate_format(log):
                 continue
-
-            status_code = data['status_code']
-
-            if status_code not in status_codes:
-                continue
-
-            total_size += data['file_size']
-            status_codes[status_code] += 1
-
-            if counter % 10 == 0:
-                print_status(total_size, status_codes)
-        print_status(total_size, status_codes)
+            status_code, file_size = log_parser(log)
+            total_size += file_size
+            if validate_status_code(status_code):
+                entry = {status_code:
+                         status_codes_count.get(status_code, 0) + 1}
+                status_codes_count.update(entry)
+            if not log_count % 10:
+                print_log(total_size, status_codes_count)
     except KeyboardInterrupt:
-        print_status(total_size, status_codes)
-        raise
+        print_log(total_size, status_codes_count)
+    print_log(total_size, status_codes_count)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
