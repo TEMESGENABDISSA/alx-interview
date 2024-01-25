@@ -1,54 +1,89 @@
 #!/usr/bin/python3
+""" Script that reads stdin line by line and computes metrics
 
+    Input format:
+        <IP Address> - [<date>] "GET /projects/260 HTTP/1.1"
+            <status code> <file size>
+        (if the format is not this one, the line must be skipped)
+
+    format: <status code>: <number>
+"""
 import sys
+import re
 
 
-def print_msg(dict_sc, total_file_size):
-    """
-    Method to print
-    Args:
-        dict_sc: dict of status codes
-        total_file_size: total of the file
-    Returns:
-        Nothing
-    """
-
-    print("File size: {}".format(total_file_size))
-    for key, val in sorted(dict_sc.items()):
-        if val != 0:
-            print("{}: {}".format(key, val))
+def print_status(total_size, status_codes):
+    """ Print Status Function """
+    print(f"File size: {total_size}")
+    for code, count in status_codes.items():
+        if count > 0:
+            print(f"{code}: {count}")
 
 
-total_file_size = 0
-code = 0
-counter = 0
-dict_sc = {"200": 0,
-           "301": 0,
-           "400": 0,
-           "401": 0,
-           "403": 0,
-           "404": 0,
-           "405": 0,
-           "500": 0}
+def match_input(input_line):
+    """ Check if input line match """
+    data = {'status_code': 0, 'file_size': 0}
 
-try:
-    for line in sys.stdin:
-        parsed_line = line.split()  # ✄ trimming
-        parsed_line = parsed_line[::-1]  # inverting
+    pattern = re.compile(r'\b^[0-9]+.[0-9]+.[0-9]+.[0-9]+ - '
+                         r'\[[0-9]+-[0-9]+-[0-9]+ '
+                         r'[0-9]+:[0-9]+:[0-9]+.[0-9]+\] '
+                         r'"GET \/projects\/260 HTTP\/1.1" '
+                         r'(200|301|400|401|403|404|405|500) ([0-9]+)$\b')
 
-        if len(parsed_line) > 2:
+    match = pattern.search(input_line)
+    if not match:
+        return (None)
+
+    try:
+        data['status_code'] = int(match.group(1))
+    except Exception:
+        return (None)
+
+    try:
+        data['file_size'] = int(match.group(2))
+    except Exception:
+        return (None)
+    return (data)
+
+
+def main():
+    """ Main Function """
+    total_size = 0
+    status_codes = {
+                200: 0,
+                301: 0,
+                400: 0,
+                401: 0,
+                403: 0,
+                404: 0,
+                405: 0,
+                500: 0
+            }
+    counter = 0
+
+    try:
+        for line in sys.stdin:
+            data = match_input(line)
             counter += 1
 
-            if counter <= 10:
-                total_file_size += int(parsed_line[0])  # file size
-                code = parsed_line[1]  # status code
+            if not data:
+                continue
 
-                if (code in dict_sc.keys()):
-                    dict_sc[code] += 1
+            status_code = data['status_code']
 
-            if (counter == 10):
-                print_msg(dict_sc, total_file_size)
-                counter = 0
+            if status_code not in status_codes:
+                continue
 
-finally:
-    print_msg(dict_sc, total_file_size)
+            total_size += data['file_size']
+            status_codes[status_code] += 1
+
+            if counter % 10 == 0:
+                print_status(total_size, status_codes)
+        print_status(total_size, status_codes)
+    except KeyboardInterrupt:
+        print_status(total_size, status_codes)
+        raise
+
+
+if __name__ == "__main__":
+    main()
