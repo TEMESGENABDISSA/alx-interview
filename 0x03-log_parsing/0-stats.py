@@ -1,52 +1,82 @@
 #!/usr/bin/python3
+""" Script that reads stdin line by line and computes metrics
+
+    Input format:
+        <IP Address> - [<date>] "GET /projects/260 HTTP/1.1"
+            <status code> <file size>
+        (if the format is not this one, the line must be skipped)
+
+    format: <status code>: <number>
 """
-This module contains a method that reads stdin line by line and
-computes metrics
-"""
-import dis
 import sys
+import re
 
 
-def display_metrics(total_size, status_code):
-    """
-    Function that print the metrics
-    """
-
-    print('File size: {}'.format(total_size))
-    for key, value in sorted(status_code.items()):
-        if value != 0:
-            print('{}: {}'.format(key, value))
+def print_status(total_size, status_codes):
+    """ Print Status Function """
+    print(f"File size: {total_size}")
+    for code, count in status_codes.items():
+        if count > 0:
+            print(f"{code}: {count}")
 
 
-if __name__ == '__main__':
+def match_input(input_line):
+    """ Check if input line match """
+    data = {'status_code': 0, 'file_size': 0}
+
+    pattern = re.compile(r'\b^[0-9]+.[0-9]+.[0-9]+.[0-9]+ - '
+                         r'\[[0-9]+-[0-9]+-[0-9]+ '
+                         r'[0-9]+:[0-9]+:[0-9]+.[0-9]+\] '
+                         r'"GET \/projects\/260 HTTP\/1.1" '
+                         r'(200|301|400|401|403|404|405|500) ([0-9]+)$\b')
+
+    match = pattern.search(input_line)
+    if not match:
+        return (None)
+
+    data['status_code'] = int(match.group(1))
+    data['file_size'] = int(match.group(2))
+    return (data)
+
+
+def main():
+    """ Main Function """
     total_size = 0
-    status_code = {
-        '200': 0,
-        '301': 0,
-        '400': 0,
-        '401': 0,
-        '403': 0,
-        '404': 0,
-        '405': 0,
-        '500': 0
-    }
+    status_codes = {
+                200: 0,
+                301: 0,
+                400: 0,
+                401: 0,
+                403: 0,
+                404: 0,
+                405: 0,
+                500: 0
+            }
+    counter = 0
 
     try:
-        i = 0
         for line in sys.stdin:
-            args = line.split()
-            if len(args) > 6:
-                status = args[-2]
-                file_size = args[-1]
-                total_size += int(file_size)
-                if status in status_code:
-                    i += 1
-                    status_code[status] += 1
-                    if i % 10 == 0:
-                        display_metrics(total_size, status_code)
+            data = match_input(line)
+            counter += 1
 
+            if not data:
+                continue
+
+            status_code = data['status_code']
+
+            if status_code not in status_codes:
+                continue
+
+            total_size += data['file_size']
+            status_codes[status_code] += 1
+
+            if counter % 10 == 0:
+                print_status(total_size, status_codes)
+        print_status(total_size, status_codes)
     except KeyboardInterrupt:
-        display_metrics(total_size, status_code)
+        print_status(total_size, status_codes)
         raise
-    else:
-        display_metrics(total_size, status_code)
+
+
+if __name__ == "__main__":
+    main()
