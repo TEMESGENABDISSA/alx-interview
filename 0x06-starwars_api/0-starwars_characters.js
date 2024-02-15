@@ -1,25 +1,28 @@
 #!/usr/bin/node
-/**
- * Starwars Characters
- */
+
 const request = require('request');
 
-const movieId = process.argv[2];
-const movieURL = `https://swapi-api.alx-tools.com/api/films/${movieId}`;
+const filmNum = process.argv[2] + '/';
+const filmURL = 'https://swapi-api.hbtn.io/api/films/';
 
-request(movieURL, (err, res, body) => {
-  if (err) console.log(err);
-  const index = 0;
-  const characters = JSON.parse(body).characters;
-  printMovieCharacter(characters, index);
+// Makes an API request to get film information
+request(filmURL + filmNum, async function (err, res, body) {
+  if (err) return console.error(err);
+
+  // Parse the response body to get the list of character URLs
+  const charURLList = JSON.parse(body).characters;
+
+  // Iterare through the character URLs and fect character information
+  // Make a request to each character URL
+  for (const charURL of charURLList) {
+    await new Promise(function (resolve, reject) {
+      request(charURL, function (err, res, body) {
+        if (err) return console.error(err);
+
+        // Parse the charcter nformation and print the character's name Resolve the promise to indicate completion
+        console.log(JSON.parse(body).name);
+        resolve();
+      });
+    });
+  }
 });
-
-const printMovieCharacter = function (url, i) {
-  request(url[i], (err, res, body) => {
-    if (err) console.log(err);
-    console.log(JSON.parse(body).name);
-    if (++i < url.length) {
-      printMovieCharacter(url, i++);
-    }
-  });
-};
