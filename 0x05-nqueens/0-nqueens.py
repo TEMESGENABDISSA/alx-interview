@@ -1,121 +1,59 @@
 #!/usr/bin/python3
-"""
-0. N queens for the win
-"""
+"""doc doc doc"""
 import sys
 
 
-def backtracking(board, row=0, column=0):
-    """
-    A method that uses the backtracking algorithm to obtain
-    all possible solutions
-    """
-    if row == len(board):
-        print_result(board)
-        return
+def solve_queens_problem(board_size):
+    """doc doc doc"""
 
-    if row == 0:
-        for column in range(len(board)):
-            board[row][column] = 1
-            backtracking(board, row + 1, 0)
-            board[row][column] = 0
-
-    else:
-        for column in range(len(board)):
-            if comprobation(board, row, column):
-                board[row][column] = 1
-                backtracking(board, row + 1, 0)
-                board[row][column] = 0
-
-
-def comprobation(board, row, column):
-    """
-    method that checks if the queen is being attacked,
-    vertically or diagonally on both sides
-    """
-    for row_2 in range(len(board)):
-        if board[row_2][column] == 1:
-            return False
-
-    row_2 = row
-    column_2 = column
-
-    if row != len(board) - 1 or column != 0:
-        while row_2 > 0 and column_2 > 0:
-            row_2 -= 1
-            column_2 -= 1
-
-        while row_2 < len(board) and column_2 < len(board):
-            if board[row_2][column_2] == 1:
+    def is_valid_position(pos, occupied_pos):
+        """doc doc doc"""
+        for i in range(len(occupied_pos)):
+            if (
+                occupied_pos[i] == pos or
+                occupied_pos[i] - i == pos - len(occupied_pos) or
+                occupied_pos[i] + i == pos + len(occupied_pos)
+            ):
                 return False
-            row_2 += 1
-            column_2 += 1
+        return True
 
-    row_2 = row
-    column_2 = column
+    def place_queens(board_size, index, occupied_pos, solutions):
+        """doc doc doc"""
+        if index == board_size:
+            solutions.append(occupied_pos[:])
+            return
 
-    if row != len(board) - 1 or column != len(board) - 1:
-        while row_2 > 0 and column_2 < len(board) - 1:
-            row_2 -= 1
-            column_2 += 1
+        for i in range(board_size):
+            if is_valid_position(i, occupied_pos):
+                occupied_pos.append(i)
+                place_queens(board_size, index + 1, occupied_pos, solutions)
+                occupied_pos.pop()
 
-        while row_2 < len(board) and column_2 >= 0:
-            if board[row_2][column_2] == 1:
-                return False
-            row_2 += 1
-            column_2 -= 1
-
-    return True
-
-
-def print_result(board):
-    """
-    Method that prints the location of the queen
-    through its row and column
-    """
-    result = []
-    for row in board:
-        result.append([board.index(row), row.index(1)])
-
-    print(result)
+    solutions = []
+    place_queens(board_size, 0, [], solutions)
+    return solutions
 
 
-def validate_integer(number):
-    """
+def main():
+    """doc doc doc"""
+    if len(sys.argv) != 2:
+        print("Usage: nqueens N")
+        sys.exit(1)
 
-    """
     try:
-        number = int(number)
-        return number
+        board_size = int(sys.argv[1])
     except ValueError:
-        return 1
-    except TypeError:
-        return 1
+        print("N must be a number")
+        sys.exit(1)
 
-argc = len(sys.argv)
-argv = sys.argv
+    if board_size < 4:
+        print("N must be at least 4")
+        sys.exit(1)
 
-if argc != 2:
-    print("Usage: nqueens N")
-    sys.exit(1)
+    solutions = solve_queens_problem(board_size)
+    for solution in solutions:
+        print([[i, solution[i]] for i in range(len(solution))])
 
-n = validate_integer(argv[1])
 
-if n == 1:
-    print("N must be a number")
-    sys.exit(1)
-
-if n < 4:
-    print("N must be at least 4")
-    sys.exit(1)
-
-board = []
-row = []
-
-for i in range(n):
-    for j in range(n):
-        row.append(0)
-    board.append(row)
-    row = []
-
-backtracking(board)
+if __name__ == "__main__":
+    main()
